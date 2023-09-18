@@ -88,29 +88,28 @@ export function VideoInputForm({ onVideoUploaded }: IProps) {
 
     setStatus('converting')
 
-    const prompt = promptInputRef.current
+    try {
+      const prompt = promptInputRef.current.value
+  
+      // Convert .mp4 to .mp3
+      const audioFile = await convertVideoToAudio(videoFile)
+      const data = new FormData()
+      data.append('file', audioFile)
+      setStatus('uploading')
+      const response = await api.post('/videos', data)
+      const videoId = response.data.video.id
+      setStatus('generating')
+  
+      await api.post(`/videos/${videoId}/transcription`, {
+        prompt,
+      })
+      setStatus('success')
+      onVideoUploaded(videoId)
 
-    // Convert .mp4 to .mp3
-    const audioFile = await convertVideoToAudio(videoFile)
-
-    const data = new FormData()
-
-    data.append('file', audioFile)
-
-    setStatus('uploading')
-
-    const response = await api.post('/videos', data)
-
-    const videoId = response.data.video.id
-
-    setStatus('generating')
-
-    await api.post(`/videos/${videoId}/transcription`, {
-      prompt,
-    })
-
-    setStatus('success')
-    onVideoUploaded(videoId)
+    } catch (e) {
+      console.log(e)
+      setStatus('waiting')
+    }
   }
 
   const previewURL = useMemo(() => {
@@ -129,7 +128,7 @@ export function VideoInputForm({ onVideoUploaded }: IProps) {
       >
         {
           videoFile && previewURL ?
-          <video src={previewURL} controls={false} className="pointer-events-none absolute inset-0" />
+          <video src={previewURL} controls={false} className="pointer-events-none absolute inset-0 max-h-full" />
           :
           <>
             <FileVideo className="w-4 h-4"/>
